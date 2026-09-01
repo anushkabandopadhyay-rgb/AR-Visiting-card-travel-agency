@@ -1,0 +1,194 @@
+<!doctype html>
+<html>
+    <head>
+        <title>AR Tourism Business Card</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+        
+        <!-- A-Frame and AR.js Libraries -->
+        <script src="https://aframe.io/releases/1.0.4/aframe.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+        <script src="https://raw.githack.com/donmccurdy/aframe-extras/master/dist/aframe-extras.loaders.min.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-detector.js"></script>
+        <script src="https://raw.githack.com/AR-js-org/studio-backend/master/src/modules/marker/tools/gesture-handler.js"></script>
+
+        <style>
+            /* UI Overlay Card Styling */
+            #info-card {
+                position: fixed;
+                bottom: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 85%;
+                max-width: 360px;
+                background: rgba(255, 255, 255, 0.95);
+                border-radius: 16px;
+                padding: 16px 20px;
+                box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                color: #2c3e50;
+                display: none; /* Hidden by default */
+                z-index: 9999;
+                backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                transition: all 0.3s ease-in-out;
+            }
+
+            #info-card h3 {
+                margin: 0 0 6px 0;
+                font-size: 1.25rem;
+                color: #007aff;
+            }
+
+            #info-card p {
+                margin: 4px 0;
+                font-size: 0.9rem;
+                line-height: 1.4;
+                color: #4a5568;
+            }
+
+            #info-card .tag {
+                display: inline-block;
+                background: #e1f0ff;
+                color: #0066cc;
+                padding: 3px 8px;
+                border-radius: 6px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                margin-top: 6px;
+            }
+
+            #info-card .price {
+                font-weight: bold;
+                color: #27ae60;
+            }
+
+            #close-btn {
+                position: absolute;
+                top: 10px;
+                right: 12px;
+                background: none;
+                border: none;
+                font-size: 1.2rem;
+                color: #a0aec0;
+                cursor: pointer;
+            }
+        </style>
+    </head>
+
+    <body style="margin: 0; overflow: hidden;">
+        <!-- Interactive UI Overlay Panel -->
+        <div id="info-card">
+            <button id="close-btn" onclick="closeInfoCard()">&times;</button>
+            <h3 id="card-title">Featured Destination</h3>
+            <p id="card-description">Tap the globe to explore featured travel deals.</p>
+            <p><span class="tag">Best Time:</span> <span id="card-season">-</span></p>
+            <p><span class="tag">Package Cost:</span> <span id="card-price" class="price">-</span> / person</p>
+        </div>
+
+        <!-- A-Frame AR Scene -->
+        <a-scene
+            vr-mode-ui="enabled: false;"
+            loading-screen="enabled: false;"
+            renderer="logarithmicDepthBuffer: true;"
+            arjs="trackingMethod: best; sourceType: webcam; debugUIEnabled: false;"
+            id="scene"
+            embedded
+            gesture-detector
+        >
+            <a-assets>
+                <a-asset-item id="animated-asset" src="assets/asset.gltf"></a-asset-item>
+            </a-assets>
+
+            <a-marker
+                id="animated-marker"
+                type="pattern"
+                preset="custom"
+                url="assets/marker.patt"
+                raycaster="objects: .clickable"
+                emitevents="true"
+                cursor="fuse: false; rayOrigin: mouse;"
+            >
+                <a-entity
+                    id="bowser-model"
+                    scale="1.365 1.365 1.365"
+                    animation-mixer="loop: repeat"
+                    gltf-model="#animated-asset"
+                    class="clickable"
+                    gesture-handler
+                    globe-interaction
+                ></a-entity>
+            </a-marker>
+
+            <!-- Camera Entity required for Cursor/Raycaster -->
+            <a-entity camera></a-entity>
+        </a-scene>
+
+        <!-- Interactive Script to Cycle Package Deals -->
+        <script>
+            // Sample array of travel deals
+            const travelPackages = [
+                {
+                    destination: "Tokyo, Japan",
+                    description: "Experience cherry blossoms, vibrant modern culture, and rich historical temples.",
+                    season: "March - May & September - November",
+                    price: "$1,200"
+                },
+                {
+                    destination: "Paris, France",
+                    description: "Enjoy world-class art, iconic landmarks, exquisite dining, and romantic cityscapes.",
+                    season: "June - August & September",
+                    price: "$1,450"
+                },
+                {
+                    destination: "Bali, Indonesia",
+                    description: "Relax on tropical beaches, explore lush rice terraces, and visit serene water temples.",
+                    season: "April - October",
+                    price: "$850"
+                },
+                {
+                    destination: "Swiss Alps, Switzerland",
+                    description: "Discover majestic alpine peaks, scenic train journeys, and world-class ski resorts.",
+                    season: "December - March (Skiing) / June - September (Hiking)",
+                    price: "$1,800"
+                }
+            ];
+
+            let currentIndex = 0;
+
+            // Custom A-Frame component to handle click/tap interactions
+            AFRAME.registerComponent('globe-interaction', {
+                init: function () {
+                    const el = this.el;
+
+                    el.addEventListener('click', function () {
+                        // Retrieve current package details
+                        const currentPackage = travelPackages[currentIndex];
+
+                        // Update HTML card content
+                        document.getElementById('card-title').innerText = currentPackage.destination;
+                        document.getElementById('card-description').innerText = currentPackage.description;
+                        document.getElementById('card-season').innerText = currentPackage.season;
+                        document.getElementById('card-price').innerText = currentPackage.price;
+
+                        // Display the information overlay
+                        document.getElementById('info-card').style.display = 'block';
+
+                        // Cycle to next package for subsequent taps
+                        currentIndex = (currentIndex + 1) % travelPackages.length;
+                    });
+                }
+            });
+
+            // Hide card when close button is clicked
+            function closeInfoCard() {
+                document.getElementById('info-card').style.display = 'none';
+            }
+
+            // Hide info card automatically if marker tracking is lost
+            const marker = document.querySelector('#animated-marker');
+            marker.addEventListener('markerLost', function() {
+                closeInfoCard();
+            });
+        </script>
+    </body>
+</html>
